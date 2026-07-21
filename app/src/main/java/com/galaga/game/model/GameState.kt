@@ -14,6 +14,7 @@ sealed class GameState {
         val playerBullets: List<Bullet>,
         val enemyBullets: List<Bullet>,
         val explosions: List<Explosion>,
+        val powerUps: List<PowerUp> = emptyList(),
         val score: Int,
         val level: Int,
         val stageState: StageState,

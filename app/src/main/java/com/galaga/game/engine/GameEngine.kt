@@ -17,6 +17,7 @@ enum class DiveType { STRAIGHT, S_CURVE, MULTI_SEGMENT }
 
 class GameEngine {
     private var bulletIdCounter = 0L
+    private var powerUpIdCounter = 0L
 
     fun createPlayingState(
         level: Int,
@@ -26,6 +27,7 @@ class GameEngine {
         lives: Int = 3
     ): GameState.Playing {
         bulletIdCounter = 0L
+        powerUpIdCounter = 0L
         val player = Player(
             x = canvasWidth / 2f,
             y = canvasHeight * 0.93f,
@@ -38,6 +40,7 @@ class GameEngine {
             playerBullets = emptyList(),
             enemyBullets = emptyList(),
             explosions = emptyList(),
+            powerUps = emptyList(),
             score = score,
             level = level,
             stageState = StageState.Entering
@@ -45,11 +48,11 @@ class GameEngine {
     }
 
     private fun createFormation(level: Int, canvasWidth: Float, canvasHeight: Float): List<Enemy> {
-        val rows = min(2 + (level - 1), 5)
-        val cols = 6
-        val marginX = canvasWidth * 0.08f
+        val rows = (2 + (level - 1) / 2).coerceAtMost(5)
+        val cols = (6 + (level - 1) % 3 * 2).coerceAtMost(10)
+        val marginX = canvasWidth * 0.06f
         val spacingX = (canvasWidth - 2f * marginX) / (cols - 1).coerceAtLeast(1)
-        val spacingY = canvasHeight * 0.035f
+        val spacingY = canvasHeight * 0.038f
         val startY = canvasHeight * 0.02f
 
         var idCounter = 0
@@ -58,14 +61,14 @@ class GameEngine {
                 for (col in 0 until cols) {
                     val formationX = marginX + col * spacingX
                     val formationY = startY + row * spacingY
-                    val isBossRow = level % 3 == 0 && row == 0
+                    val isBossRow = level % 2 == 0 && row == 0
+                    val isBossCell = isBossRow && (col == cols / 2 || (cols >= 8 && col == cols / 2 - 1))
                     val type = when {
-                        isBossRow && col == cols / 2 -> EnemyType.BOSS
-                        isBossRow -> EnemyType.ZAKO
-                        level >= 4 && row < 2 -> EnemyType.GOEI
-                        level >= 7 && row < 3 -> EnemyType.GOEI
+                        isBossCell -> EnemyType.BOSS
+                        row < 2 && level >= 3 -> EnemyType.GOEI
                         else -> EnemyType.ZAKO
                     }
+                    val extraHealth = if (type == EnemyType.BOSS) level / 4 else 0
                     add(
                         Enemy(
                             id = idCounter++,
@@ -77,8 +80,8 @@ class GameEngine {
                             formationTargetX = formationX,
                             formationTargetY = formationY,
                             state = EnemyState.Entering(),
-                            health = type.maxHealth,
-                            shootCooldown = 2f + GameRandom.nextFloat() * 3f,
+                            health = type.maxHealth + extraHealth,
+                            shootCooldown = (2f + GameRandom.nextFloat() * 3f) / (1f + level * 0.05f),
                             animTimer = 0f
                         )
                     )
@@ -130,28 +133,36 @@ class GameEngine {
         var playerBullets = state.playerBullets
         var enemyBullets = state.enemyBullets
         var explosions = state.explosions
+        var powerUps = state.powerUps
         var score = state.score
         val frameCount = state.frameCount + 1
         var stageState = state.stageState
 
-        // 1. Player timers (invulnerability, shoot cooldown)
+        // 1. Player timers
         player = player.updateTimers(deltaTime)
 
-        // 2. Auto-shoot
+        // 2. Auto-shoot según el powerLevel del jugador
         if (player.canShoot()) {
-            val bullet = Bullet(
-                id = bulletIdCounter++,
-                x = player.x,
-                y = player.y - player.height / 2f,
-                vx = 0f,
-                vy = -950f,
-                isPlayerBullet = true
-            )
-            playerBullets = playerBullets + bullet
+            val shootY = player.y - player.height / 2f
+            val newBullets = when (player.powerLevel) {
+                1 -> listOf(
+                    Bullet(id = bulletIdCounter++, x = player.x, y = shootY, vx = 0f, vy = -980f, isPlayerBullet = true)
+                )
+                2 -> listOf(
+                    Bullet(id = bulletIdCounter++, x = player.x - 20f, y = shootY, vx = 0f, vy = -980f, isPlayerBullet = true),
+                    Bullet(id = bulletIdCounter++, x = player.x + 20f, y = shootY, vx = 0f, vy = -980f, isPlayerBullet = true)
+                )
+                else -> listOf(
+                    Bullet(id = bulletIdCounter++, x = player.x - 22f, y = shootY, vx = -140f, vy = -950f, isPlayerBullet = true),
+                    Bullet(id = bulletIdCounter++, x = player.x, y = shootY - 4f, vx = 0f, vy = -1000f, isPlayerBullet = true),
+                    Bullet(id = bulletIdCounter++, x = player.x + 22f, y = shootY, vx = 140f, vy = -950f, isPlayerBullet = true)
+                )
+            }
+            playerBullets = playerBullets + newBullets
             player = player.resetShootCooldown()
         }
 
-        // 3. Update bullets and remove off-screen
+        // 3. Update proyectiles y PowerUps (remover fuera de pantalla)
         val margin = 100f
         playerBullets = playerBullets.map { it.update(deltaTime) }.filter { b ->
             b.y > -margin && b.y < canvasHeight + margin &&
@@ -161,19 +172,22 @@ class GameEngine {
             b.y > -margin && b.y < canvasHeight + margin &&
             b.x > -margin && b.x < canvasWidth + margin
         }
+        powerUps = powerUps.map { it.update(deltaTime) }.filter { p ->
+            p.y < canvasHeight + margin
+        }
 
-        // 4. Update explosions
+        // 4. Update explosiones
         explosions = explosions.mapNotNull { e ->
             val nt = e.timer - deltaTime
             if (nt <= 0f) null else e.copy(timer = nt)
         }
 
-        // 5. Update enemies
-        val entranceDuration = 2.0f
+        // 5. Update enemigos
+        val entranceDuration = (2.0f / (1f + state.level * 0.02f)).coerceAtLeast(1.0f)
         enemies = enemies.map { enemy ->
             when (val s = enemy.state) {
                 is EnemyState.Entering -> {
-                    val delay = enemy.formationRow * 0.15f + enemy.formationCol * 0.04f
+                    val delay = enemy.formationRow * 0.12f + enemy.formationCol * 0.03f
                     val raw = frameCount * (1f / 60f) / entranceDuration - delay
                     val progress = raw.coerceIn(0f, 1f)
                     val pos = entrancePosition(progress, enemy.formationTargetX, enemy.formationTargetY, canvasWidth, canvasHeight)
@@ -196,7 +210,7 @@ class GameEngine {
                 }
 
                 is EnemyState.Diving -> {
-                    val duration = if (s.diveType == DiveType.MULTI_SEGMENT) 2.0f else 1.2f
+                    val duration = if (s.diveType == DiveType.MULTI_SEGMENT) 1.8f else 1.1f
                     val np = (s.progress + deltaTime / duration).coerceAtMost(1f)
                     val pos = when (s.diveType) {
                         DiveType.STRAIGHT -> straightDive(np, s.startX, s.startY, s.targetX, s.targetY)
@@ -204,7 +218,6 @@ class GameEngine {
                         DiveType.MULTI_SEGMENT -> multiSegmentDive(np, s.startX, s.startY, s.targetX, canvasHeight)
                     }
 
-                    // Shoot once during dive at progress ~0.45
                     var hasShot = s.hasShot
                     if (!hasShot && np >= 0.45f) {
                         val eb = Bullet(
@@ -212,7 +225,7 @@ class GameEngine {
                             x = pos.x,
                             y = pos.y + enemy.height / 2f,
                             vx = 0f,
-                            vy = 380f + state.level * 40f,
+                            vy = 400f + state.level * 20f,
                             isPlayerBullet = false
                         )
                         enemyBullets = enemyBullets + eb
@@ -220,7 +233,7 @@ class GameEngine {
                     }
 
                     if (np >= 1f) {
-                        if (GameRandom.nextFloat() < 0.5f) {
+                        if (GameRandom.nextFloat() < 0.6f) {
                             enemy.copy(
                                 x = pos.x, y = pos.y,
                                 state = EnemyState.Returning(startX = pos.x, startY = pos.y)
@@ -237,14 +250,14 @@ class GameEngine {
                 }
 
                 is EnemyState.Returning -> {
-                    val np = (s.progress + deltaTime / 1.5f).coerceAtMost(1f)
+                    val np = (s.progress + deltaTime / 1.4f).coerceAtMost(1f)
                     val x = lerp(s.startX, enemy.formationTargetX, np)
                     val y = lerp(s.startY, enemy.formationTargetY, np)
                     if (np >= 1f) {
                         enemy.copy(
                             x = enemy.formationTargetX, y = enemy.formationTargetY,
                             state = EnemyState.Formation,
-                            shootCooldown = 1.5f + GameRandom.nextFloat() * 3f
+                            shootCooldown = 1.2f + GameRandom.nextFloat() * 2.5f
                         )
                     } else {
                         enemy.copy(x = x, y = y, state = s.copy(progress = np))
@@ -265,14 +278,14 @@ class GameEngine {
             if (!anyEntering) stageState = StageState.Formation
         }
 
-        // 7. Dive decision (only in Formation stage)
+        // 7. Dive decision
         if (stageState is StageState.Formation) {
             val diving = enemies.count { it.state is EnemyState.Diving }
-            val maxDivers = (1 + state.level / 2).coerceAtMost(4)
+            val maxDivers = (2 + state.level / 3).coerceAtMost(6)
             if (diving < maxDivers) {
                 val candidates = enemies.filter { it.state is EnemyState.Formation }
                 if (candidates.isNotEmpty()) {
-                    val diveRate = 0.004f * state.level * deltaTime * 60f
+                    val diveRate = (0.005f * state.level * deltaTime * 60f).coerceAtMost(0.25f)
                     if (GameRandom.nextFloat() < diveRate) {
                         val diver = candidates[(GameRandom.nextFloat() * candidates.size).toInt().coerceAtMost(candidates.size - 1)]
                         val spread = canvasWidth * 0.15f
@@ -301,7 +314,7 @@ class GameEngine {
             }
         }
 
-        // 8. Collision: player bullets vs enemies
+        // 8. Colisión: Disparos del jugador vs Enemigos y Spawn de Power-Ups
         val bulletsToRemove = mutableSetOf<Long>()
         val enemiesHit = mutableSetOf<Int>()
 
@@ -331,6 +344,23 @@ class GameEngine {
                     if (nh <= 0) {
                         explosions = explosions + Explosion(x = e.x, y = e.y)
                         score += e.type.scoreValue
+
+                        // Spawn de Power-Up (35% de probabilidad al destruir enemigo)
+                        if (GameRandom.nextFloat() < 0.35f) {
+                            val roll = GameRandom.nextFloat()
+                            val pType = when {
+                                roll < 0.50f -> PowerUpType.WEAPON_UPGRADE
+                                roll < 0.85f -> PowerUpType.SHIELD
+                                else -> PowerUpType.EXTRA_LIFE
+                            }
+                            powerUps = powerUps + PowerUp(
+                                id = powerUpIdCounter++,
+                                x = e.x,
+                                y = e.y,
+                                type = pType
+                            )
+                        }
+
                         e.copy(state = EnemyState.Destroyed())
                     } else {
                         e.copy(health = nh)
@@ -339,7 +369,26 @@ class GameEngine {
             }
         }
 
-        // 9. Collision: enemy bullets vs player
+        // 9. Colisión: Jugador vs Power-Ups
+        val powerUpsToRemove = mutableSetOf<Long>()
+        for (p in powerUps) {
+            if (checkCollision(
+                    p.x, p.y, p.width, p.height,
+                    player.x, player.y, player.width, player.height,
+                    0.2f, 0.2f
+                )
+            ) {
+                powerUpsToRemove.add(p.id)
+                player = when (p.type) {
+                    PowerUpType.WEAPON_UPGRADE -> player.upgradePower()
+                    PowerUpType.SHIELD -> player.activateShield()
+                    PowerUpType.EXTRA_LIFE -> player.addLife()
+                }
+            }
+        }
+        powerUps = powerUps.filter { it.id !in powerUpsToRemove }
+
+        // 10. Colisión: Disparos enemigos vs Jugador
         var playerWasHit = false
         for (bullet in enemyBullets) {
             if (playerWasHit) break
@@ -357,7 +406,7 @@ class GameEngine {
             }
         }
 
-        // 10. Collision: enemies vs player
+        // 11. Colisión: Enemigos vs Jugador
         if (!player.isInvulnerable && !playerWasHit) {
             for (enemy in enemies) {
                 if (!enemy.isAlive) continue
@@ -374,25 +423,21 @@ class GameEngine {
             }
         }
 
-        // 11. Check game over
+        // 12. Verificar Game Over
         if (player.lives <= 0) {
             return GameState.GameOver(score = score, level = state.level)
         }
 
-        // 12. Check level complete
+        // 13. Verificar avance de nivel (Soporte infinito para +100 niveles)
         val aliveEnemies = enemies.filter { it.isAlive }
         if (aliveEnemies.isEmpty() && stageState is StageState.Formation) {
             val nextLevel = state.level + 1
-            return if (nextLevel > 8) {
-                GameState.Victory(score = score)
-            } else {
-                GameState.LevelIntro(
-                    level = nextLevel,
-                    remainingTime = 3f,
-                    lives = player.lives,
-                    score = score
-                )
-            }
+            return GameState.LevelIntro(
+                level = nextLevel,
+                remainingTime = 2.5f,
+                lives = player.lives,
+                score = score
+            )
         }
 
         return state.copy(
@@ -401,6 +446,7 @@ class GameEngine {
             playerBullets = playerBullets,
             enemyBullets = enemyBullets,
             explosions = explosions,
+            powerUps = powerUps,
             score = score,
             stageState = stageState,
             frameCount = frameCount
