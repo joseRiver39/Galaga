@@ -1,0 +1,4 @@
+com.galaga.game.test.app-androidTest-0 C:\Users\ANTONIO\Desktop\galaga\app\build\generated\res\resValues\androidTest\debug
+com.galaga.game.test.app-mergeDebugAndroidTestResources-1 C:\Users\ANTONIO\Desktop\galaga\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.galaga.game.test.app-mergeDebugAndroidTestResources-2 C:\Users\ANTONIO\Desktop\galaga\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.galaga.game.test.app-merged_res-3 C:\Users\ANTONIO\Desktop\galaga\app\build\intermediates\merged_res\debugAndroidTest
