@@ -26,14 +26,16 @@ class GameEngine {
         canvasWidth: Float,
         canvasHeight: Float,
         score: Int = 0,
-        lives: Int = 3
+        lives: Int = 3,
+        powerLevel: Int = 1
     ): GameState.Playing {
         bulletIdCounter = 0L
         powerUpIdCounter = 0L
         val player = Player(
             x = canvasWidth / 2f,
             y = canvasHeight * 0.93f,
-            lives = lives
+            lives = lives,
+            powerLevel = powerLevel
         )
         val enemies = createFormation(level, canvasWidth, canvasHeight)
         return GameState.Playing(
@@ -118,7 +120,8 @@ class GameEngine {
                 canvasWidth = canvasWidth,
                 canvasHeight = canvasHeight,
                 score = state.score,
-                lives = state.lives
+                lives = state.lives,
+                powerLevel = state.powerLevel
             )
         }
         return state.copy(remainingTime = remaining)
@@ -140,6 +143,7 @@ class GameEngine {
         val frameCount = state.frameCount + 1
         var stageState = state.stageState
         val soundEvents = mutableListOf<SoundEvent>()
+        var screenShake = (state.screenShake - deltaTime * 30f).coerceAtLeast(0f)
 
         // 1. Player timers
         player = player.updateTimers(deltaTime)
@@ -205,11 +209,13 @@ class GameEngine {
                 is EnemyState.Formation -> {
                     val bob = formationBob(frameCount, enemy.formationCol, enemy.formationRow)
                     val cd = (enemy.shootCooldown - deltaTime).coerceAtLeast(0f)
+                    val hf = (enemy.hitFlashTimer - deltaTime).coerceAtLeast(0f)
                     enemy.copy(
                         x = enemy.formationTargetX + bob.x,
                         y = enemy.formationTargetY + bob.y,
                         animTimer = enemy.animTimer + deltaTime,
-                        shootCooldown = cd
+                        shootCooldown = cd,
+                        hitFlashTimer = hf
                     )
                 }
 
@@ -240,7 +246,8 @@ class GameEngine {
                         if (GameRandom.nextFloat() < 0.6f) {
                             enemy.copy(
                                 x = pos.x, y = pos.y,
-                                state = EnemyState.Returning(startX = pos.x, startY = pos.y)
+                                state = EnemyState.Returning(startX = pos.x, startY = pos.y),
+                                hitFlashTimer = (enemy.hitFlashTimer - deltaTime).coerceAtLeast(0f)
                             )
                         } else {
                             enemy.copy(state = EnemyState.Destroyed())
@@ -248,7 +255,8 @@ class GameEngine {
                     } else {
                         enemy.copy(
                             x = pos.x, y = pos.y,
-                            state = s.copy(progress = np, hasShot = hasShot)
+                            state = s.copy(progress = np, hasShot = hasShot),
+                            hitFlashTimer = (enemy.hitFlashTimer - deltaTime).coerceAtLeast(0f)
                         )
                     }
                 }
@@ -261,10 +269,11 @@ class GameEngine {
                         enemy.copy(
                             x = enemy.formationTargetX, y = enemy.formationTargetY,
                             state = EnemyState.Formation,
-                            shootCooldown = 1.2f + GameRandom.nextFloat() * 2.5f
+                            shootCooldown = 1.2f + GameRandom.nextFloat() * 2.5f,
+                            hitFlashTimer = (enemy.hitFlashTimer - deltaTime).coerceAtLeast(0f)
                         )
                     } else {
-                        enemy.copy(x = x, y = y, state = s.copy(progress = np))
+                        enemy.copy(x = x, y = y, state = s.copy(progress = np), hitFlashTimer = (enemy.hitFlashTimer - deltaTime).coerceAtLeast(0f))
                     }
                 }
 
@@ -349,6 +358,7 @@ class GameEngine {
                         explosions = explosions + Explosion(x = e.x, y = e.y)
                         soundEvents.add(SoundEvent.EXPLOSION)
                         score += e.type.scoreValue
+                        screenShake += if (e.type == EnemyType.BOSS) 25f else 5f
 
                         // Spawn de Power-Up (35% de probabilidad al destruir enemigo)
                         if (GameRandom.nextFloat() < 0.35f) {
@@ -368,7 +378,7 @@ class GameEngine {
 
                         e.copy(state = EnemyState.Destroyed())
                     } else {
-                        e.copy(health = nh)
+                        e.copy(health = nh, hitFlashTimer = 0.15f)
                     }
                 } else e
             }
@@ -408,6 +418,7 @@ class GameEngine {
                 player = player.takeHit()
                 explosions = explosions + Explosion(x = player.x, y = player.y)
                 soundEvents.add(SoundEvent.EXPLOSION)
+                screenShake += 20f
                 enemyBullets = enemyBullets.filter { it.id != bullet.id }
                 playerWasHit = true
             }
@@ -426,6 +437,7 @@ class GameEngine {
                     player = player.takeHit()
                     explosions = explosions + Explosion(x = player.x, y = player.y)
                     soundEvents.add(SoundEvent.EXPLOSION)
+                    screenShake += 20f
                     break
                 }
             }
@@ -444,7 +456,8 @@ class GameEngine {
                 level = nextLevel,
                 remainingTime = 2.5f,
                 lives = player.lives,
-                score = score
+                score = score,
+                powerLevel = player.powerLevel
             ), soundEvents)
         }
 
@@ -457,7 +470,8 @@ class GameEngine {
             powerUps = powerUps,
             score = score,
             stageState = stageState,
-            frameCount = frameCount
+            frameCount = frameCount,
+            screenShake = screenShake.coerceAtMost(30f)
         ), soundEvents)
     }
 }

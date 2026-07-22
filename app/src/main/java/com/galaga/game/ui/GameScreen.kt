@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -97,9 +98,9 @@ fun GameScreen(viewModel: GameViewModel) {
                 .pointerInput(Unit) {
                     detectTapGestures {
                         when (viewModel.gameState) {
-                            is GameState.Menu -> viewModel.startGame()
-                            is GameState.GameOver -> viewModel.startGame()
-                            is GameState.Victory -> viewModel.startGame()
+                            is GameState.Menu -> {} // Handled by compose UI
+                            is GameState.GameOver -> viewModel.startNewGame()
+                            is GameState.Victory -> viewModel.startNewGame()
                             is GameState.Playing -> viewModel.pause()
                             else -> {}
                         }
@@ -163,6 +164,37 @@ fun GameScreen(viewModel: GameViewModel) {
                 }
             }
         }
+
+        if (gs is GameState.Menu) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 120.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (viewModel.hasSavedGame) {
+                        androidx.compose.foundation.text.BasicText(
+                            text = "CONTINUAR PARTIDA",
+                            style = TextStyle(color = Color(0xFF00E5FF), fontSize = 26.sp, fontWeight = FontWeight.Bold),
+                            modifier = Modifier
+                                .clickable { viewModel.continueGame() }
+                                .padding(16.dp)
+                        )
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(8.dp))
+                    }
+                    androidx.compose.foundation.text.BasicText(
+                        text = "NUEVA PARTIDA",
+                        style = TextStyle(color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold),
+                        modifier = Modifier
+                            .clickable { viewModel.startNewGame() }
+                            .padding(16.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -176,64 +208,80 @@ private fun drawPlaying(
     weaponImg: ImageBitmap, shieldImg: ImageBitmap, lifeImg: ImageBitmap
 ) = with(d) {
     drawRect(BackgroundColor, size = size)
-    for (star in vm.stars) drawCircle(Color.White.copy(alpha = star.alpha), star.size,
-        Offset(star.x % cw, (star.y + s.frameCount * 0.5f) % ch))
-
-    // Disparos del jugador
-    for (b in s.playerBullets) {
-        val bColor = when (s.player.powerLevel) {
-            1 -> PlayerBulletColor
-            2 -> Color(0xFF00E5FF)
-            else -> Color(0xFFFFD700)
-        }
-        drawRect(bColor, Offset(b.x - b.width / 2, b.y - b.height / 2), Size(b.width, b.height))
-        drawRect(Color.White.copy(alpha = 0.8f), Offset(b.x - b.width / 4, b.y - b.height / 2), Size(b.width / 2, b.height))
-    }
-    // Disparos enemigos
-    for (b in s.enemyBullets) {
-        drawCircle(EnemyBulletColor, b.width / 2, Offset(b.x, b.y))
-        drawCircle(Color.Yellow.copy(alpha = 0.5f), b.width / 4, Offset(b.x, b.y))
-    }
-    // Explosiones
-    for (ex in s.explosions) {
-        drawCircle(Color(0xFFFFAA00).copy(alpha = ex.alpha * 0.6f), ex.radius * 1.5f, Offset(ex.x, ex.y))
-        drawCircle(Color(0xFFFFFF44).copy(alpha = ex.alpha * 0.4f), ex.radius * 0.8f, Offset(ex.x, ex.y))
-    }
-    // Power-Ups cayendo
-    for (p in s.powerUps) {
-        val pImg = when (p.type) {
-            PowerUpType.WEAPON_UPGRADE -> weaponImg
-            PowerUpType.SHIELD -> shieldImg
-            PowerUpType.EXTRA_LIFE -> lifeImg
-        }
-        drawImage(
-            image = pImg,
-            dstOffset = IntOffset((p.x - p.width / 2).toInt(), (p.y - p.height / 2).toInt()),
-            dstSize = androidx.compose.ui.unit.IntSize(p.width.toInt(), p.height.toInt())
+    val shakeOffset = if (s.screenShake > 0) {
+        Offset(
+            (kotlin.random.Random.nextFloat() - 0.5f) * s.screenShake,
+            (kotlin.random.Random.nextFloat() - 0.5f) * s.screenShake
         )
-    }
-    // Enemigos
-    for (e in s.enemies) {
-        if (e.state is EnemyState.Destroyed) {
-            val st = e.state as EnemyState.Destroyed; val p = 1f - st.timer / 0.4f
-            drawCircle(Color(0xFFFFAA00).copy(alpha = 1f - p), e.width / 2 + p * 25f, Offset(e.x, e.y))
-            continue
-        }
-        drawEnemySprite(d, e, zakoImg, goeiImg, bossImg)
-    }
+    } else Offset.Zero
 
-    // Jugador (Evolución según powerLevel y Escudo)
-    val show = !s.player.isInvulnerable || (s.frameCount / 6L) % 2L == 0L
-    if (show) {
-        val currentShipImg = when (s.player.powerLevel) {
-            1 -> shipL1
-            2 -> shipL2
-            else -> shipL3
+    translate(left = shakeOffset.x, top = shakeOffset.y) {
+        for (star in vm.stars) drawCircle(Color.White.copy(alpha = star.alpha), star.size,
+            Offset(star.x % cw, (star.y + s.frameCount * star.size * 0.5f) % ch))
+
+        // Disparos del jugador
+        for (b in s.playerBullets) {
+            val bColor = when (s.player.powerLevel) {
+                1 -> PlayerBulletColor
+                2 -> Color(0xFF00E5FF)
+                else -> Color(0xFFFFD700)
+            }
+            drawRect(bColor, Offset(b.x - b.width / 2, b.y - b.height / 2), Size(b.width, b.height))
+            drawRect(Color.White.copy(alpha = 0.8f), Offset(b.x - b.width / 4, b.y - b.height / 2), Size(b.width / 2, b.height))
         }
-        drawShip(d, s.player, currentShipImg, s.frameCount)
+        // Disparos enemigos
+        for (b in s.enemyBullets) {
+            drawCircle(EnemyBulletColor, b.width / 2, Offset(b.x, b.y))
+            drawCircle(Color.Yellow.copy(alpha = 0.5f), b.width / 4, Offset(b.x, b.y))
+        }
+        // Explosiones
+        for (ex in s.explosions) {
+            drawCircle(Color(0xFFFFAA00).copy(alpha = ex.alpha * 0.6f), ex.radius * 1.5f, Offset(ex.x, ex.y))
+            drawCircle(Color(0xFFFFFF44).copy(alpha = ex.alpha * 0.4f), ex.radius * 0.8f, Offset(ex.x, ex.y))
+        }
+        // Power-Ups cayendo
+        for (p in s.powerUps) {
+            val pImg = when (p.type) {
+                PowerUpType.WEAPON_UPGRADE -> weaponImg
+                PowerUpType.SHIELD -> shieldImg
+                PowerUpType.EXTRA_LIFE -> lifeImg
+            }
+            drawImage(
+                image = pImg,
+                dstOffset = IntOffset((p.x - p.width / 2).toInt(), (p.y - p.height / 2).toInt()),
+                dstSize = androidx.compose.ui.unit.IntSize(p.width.toInt(), p.height.toInt())
+            )
+        }
+        // Enemigos
+        for (e in s.enemies) {
+            if (e.state is EnemyState.Destroyed) {
+                val st = e.state as EnemyState.Destroyed; val p = 1f - st.timer / 0.4f
+                drawCircle(Color(0xFFFFAA00).copy(alpha = 1f - p), e.width / 2 + p * 25f, Offset(e.x, e.y))
+                continue
+            }
+            drawEnemySprite(this, e, zakoImg, goeiImg, bossImg)
+        }
+
+        // Jugador (Evolución según powerLevel y Escudo)
+        val show = !s.player.isInvulnerable || (s.frameCount / 6L) % 2L == 0L
+        if (show) {
+            val currentShipImg = when (s.player.powerLevel) {
+                1 -> shipL1
+                2 -> shipL2
+                else -> shipL3
+            }
+            drawShip(this, s.player, currentShipImg, s.frameCount)
+        }
     }
 
     drawHud(d, tm, s, cw, ch)
+
+    if (s.stageState is StageState.Entering && s.level % 5 == 0) {
+        val alpha = 0.1f + 0.2f * kotlin.math.abs(sin(s.frameCount * 0.05f))
+        drawRect(Color.Red.copy(alpha = alpha), size = size)
+        val text = tm.measure(AnnotatedString("WARNING"), TextStyle(Color.Red, fontSize = 64.sp, fontWeight = FontWeight.Bold, letterSpacing = 8.sp))
+        drawText(textLayoutResult = text, topLeft = Offset(cw / 2 - text.size.width / 2, ch * 0.25f))
+    }
 }
 
 private fun drawEnemySprite(
@@ -248,10 +296,15 @@ private fun drawEnemySprite(
     val ew = e.width
     val eh = e.height
 
+    val colorFilter = if (e.hitFlashTimer > 0f) {
+        androidx.compose.ui.graphics.ColorFilter.tint(Color.White, androidx.compose.ui.graphics.BlendMode.SrcAtop)
+    } else null
+
     drawImage(
         image = img,
         dstOffset = IntOffset((e.x - ew / 2).toInt(), (e.y - eh / 2).toInt()),
-        dstSize = androidx.compose.ui.unit.IntSize(ew.toInt(), eh.toInt())
+        dstSize = androidx.compose.ui.unit.IntSize(ew.toInt(), eh.toInt()),
+        colorFilter = colorFilter
     )
 }
 
@@ -353,17 +406,19 @@ private fun drawHud(
 
 private fun drawMenu(d: DrawScope, tm: androidx.compose.ui.text.TextMeasurer, cw: Float, ch: Float) = with(d) {
     drawRect(BackgroundColor, size = size)
-    for (i in 0..60) drawCircle(Color.White.copy(alpha = 0.3f), 1f,
-        Offset(((i * 17 + 3) % cw.toInt()).toFloat(), ((i * 31 + 7) % ch.toInt()).toFloat()))
+    // Parallax stars in menu too
+    val time = System.currentTimeMillis() / 20f
+    for (i in 0..60) {
+        val size = 1f + (i % 3)
+        drawCircle(Color.White.copy(alpha = 0.3f), size,
+            Offset(((i * 17 + 3) % cw.toInt()).toFloat(), ((i * 31 + 7 + time * size) % ch.toInt()).toFloat()))
+    }
     val t = tm.measure(AnnotatedString("GALAGA"),
         TextStyle(MenuTitleColor, fontSize = 64.sp, fontWeight = FontWeight.Bold, letterSpacing = 8.sp))
     drawText(textLayoutResult = t, topLeft = Offset(cw / 2 - t.size.width / 2, ch * 0.25f))
-    val s = tm.measure(AnnotatedString("TOCA PARA COMENZAR"),
-        TextStyle(HudTextColor.copy(alpha = 0.8f), fontSize = 18.sp, letterSpacing = 2.sp))
-    drawText(textLayoutResult = s, topLeft = Offset(cw / 2 - s.size.width / 2, ch * 0.55f))
     val c = tm.measure(AnnotatedString("100+ Niveles • Power-Ups • Evolución de Nave"),
         TextStyle(HudTextColor.copy(alpha = 0.6f), fontSize = 12.sp))
-    drawText(textLayoutResult = c, topLeft = Offset(cw / 2 - c.size.width / 2, ch * 0.65f))
+    drawText(textLayoutResult = c, topLeft = Offset(cw / 2 - c.size.width / 2, ch * 0.45f))
 }
 
 private fun drawGameOver(d: DrawScope, tm: androidx.compose.ui.text.TextMeasurer, s: GameState.GameOver, cw: Float, ch: Float) = with(d) {

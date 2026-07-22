@@ -40,7 +40,8 @@ data class Enemy(
     val state: EnemyState,
     val health: Int,
     val shootCooldown: Float,
-    val animTimer: Float
+    val animTimer: Float,
+    val hitFlashTimer: Float = 0f
 ) {
     val isAlive: Boolean get() = state !is EnemyState.Destroyed
 

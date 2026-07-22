@@ -18,7 +18,8 @@ sealed class GameState {
         val score: Int,
         val level: Int,
         val stageState: StageState,
-        val frameCount: Long = 0
+        val frameCount: Long = 0,
+        val screenShake: Float = 0f
     ) : GameState()
 
     /** Pausa */
@@ -32,7 +33,8 @@ sealed class GameState {
         val level: Int,
         val remainingTime: Float = 3f,
         val lives: Int = 3,
-        val score: Int = 0
+        val score: Int = 0,
+        val powerLevel: Int = 1
     ) : GameState()
 
     /** Victoria */

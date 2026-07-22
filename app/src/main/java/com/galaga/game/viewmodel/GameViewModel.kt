@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import com.galaga.game.audio.SoundManager
+import com.galaga.game.data.SaveManager
 import com.galaga.game.engine.GameEngine
 import com.galaga.game.model.GameState
 import kotlin.random.Random
@@ -15,6 +16,9 @@ data class Star(val x: Float, val y: Float, val size: Float, val alpha: Float)
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     val soundManager = SoundManager(application)
+    val saveManager = SaveManager(application)
+
+    val hasSavedGame: Boolean get() = saveManager.hasSavedGame()
 
     var isSoundEnabled by mutableStateOf(true)
         private set
@@ -26,6 +30,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _gameState.value = value
             val isPlaying = value is GameState.Playing || value is GameState.LevelIntro
             soundManager.setGameState(isPlaying)
+
+            if (value is GameState.LevelIntro) {
+                saveManager.saveCheckpoint(value.level, value.score, value.lives, value.powerLevel)
+            } else if (value is GameState.GameOver) {
+                saveManager.clearSavedGame()
+            }
         }
 
     private var canvasWidth = 1080f
@@ -69,8 +79,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun startGame() {
-        gameState = GameState.LevelIntro(level = 1, remainingTime = 3f, lives = 3, score = 0)
+    fun startNewGame() {
+        saveManager.clearSavedGame()
+        gameState = GameState.LevelIntro(level = 1, remainingTime = 3f, lives = 3, score = 0, powerLevel = 1)
+    }
+
+    fun continueGame() {
+        if (hasSavedGame) {
+            gameState = GameState.LevelIntro(
+                level = saveManager.getSavedLevel(),
+                remainingTime = 3f,
+                lives = saveManager.getSavedLives(),
+                score = saveManager.getSavedScore(),
+                powerLevel = saveManager.getSavedPowerLevel()
+            )
+        } else {
+            startNewGame()
+        }
     }
 
     fun pause() {
