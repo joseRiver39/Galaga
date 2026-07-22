@@ -13,6 +13,8 @@ data class Explosion(
     val radius: Float get() = 5f + 45f * progress
 }
 
+data class EngineResult(val state: GameState, val events: List<SoundEvent> = emptyList())
+
 enum class DiveType { STRAIGHT, S_CURVE, MULTI_SEGMENT }
 
 class GameEngine {
@@ -95,11 +97,11 @@ class GameEngine {
         deltaTime: Float,
         canvasWidth: Float,
         canvasHeight: Float
-    ): GameState {
+    ): EngineResult {
         return when (state) {
-            is GameState.LevelIntro -> updateLevelIntro(state, deltaTime, canvasWidth, canvasHeight)
+            is GameState.LevelIntro -> EngineResult(updateLevelIntro(state, deltaTime, canvasWidth, canvasHeight))
             is GameState.Playing -> updatePlaying(state, deltaTime, canvasWidth, canvasHeight)
-            else -> state
+            else -> EngineResult(state)
         }
     }
 
@@ -127,7 +129,7 @@ class GameEngine {
         deltaTime: Float,
         canvasWidth: Float,
         canvasHeight: Float
-    ): GameState {
+    ): EngineResult {
         var player = state.player
         var enemies = state.enemies
         var playerBullets = state.playerBullets
@@ -137,6 +139,7 @@ class GameEngine {
         var score = state.score
         val frameCount = state.frameCount + 1
         var stageState = state.stageState
+        val soundEvents = mutableListOf<SoundEvent>()
 
         // 1. Player timers
         player = player.updateTimers(deltaTime)
@@ -160,6 +163,7 @@ class GameEngine {
             }
             playerBullets = playerBullets + newBullets
             player = player.resetShootCooldown()
+            soundEvents.add(SoundEvent.SHOOT)
         }
 
         // 3. Update proyectiles y PowerUps (remover fuera de pantalla)
@@ -343,6 +347,7 @@ class GameEngine {
                     val nh = e.health - 1
                     if (nh <= 0) {
                         explosions = explosions + Explosion(x = e.x, y = e.y)
+                        soundEvents.add(SoundEvent.EXPLOSION)
                         score += e.type.scoreValue
 
                         // Spawn de Power-Up (35% de probabilidad al destruir enemigo)
@@ -379,6 +384,7 @@ class GameEngine {
                 )
             ) {
                 powerUpsToRemove.add(p.id)
+                soundEvents.add(SoundEvent.POWERUP)
                 player = when (p.type) {
                     PowerUpType.WEAPON_UPGRADE -> player.upgradePower()
                     PowerUpType.SHIELD -> player.activateShield()
@@ -401,6 +407,7 @@ class GameEngine {
             ) {
                 player = player.takeHit()
                 explosions = explosions + Explosion(x = player.x, y = player.y)
+                soundEvents.add(SoundEvent.EXPLOSION)
                 enemyBullets = enemyBullets.filter { it.id != bullet.id }
                 playerWasHit = true
             }
@@ -418,6 +425,7 @@ class GameEngine {
                 ) {
                     player = player.takeHit()
                     explosions = explosions + Explosion(x = player.x, y = player.y)
+                    soundEvents.add(SoundEvent.EXPLOSION)
                     break
                 }
             }
@@ -425,22 +433,22 @@ class GameEngine {
 
         // 12. Verificar Game Over
         if (player.lives <= 0) {
-            return GameState.GameOver(score = score, level = state.level)
+            return EngineResult(GameState.GameOver(score = score, level = state.level), soundEvents)
         }
 
         // 13. Verificar avance de nivel (Soporte infinito para +100 niveles)
         val aliveEnemies = enemies.filter { it.isAlive }
         if (aliveEnemies.isEmpty() && stageState is StageState.Formation) {
             val nextLevel = state.level + 1
-            return GameState.LevelIntro(
+            return EngineResult(GameState.LevelIntro(
                 level = nextLevel,
                 remainingTime = 2.5f,
                 lives = player.lives,
                 score = score
-            )
+            ), soundEvents)
         }
 
-        return state.copy(
+        return EngineResult(state.copy(
             player = player,
             enemies = enemies,
             playerBullets = playerBullets,
@@ -450,6 +458,6 @@ class GameEngine {
             score = score,
             stageState = stageState,
             frameCount = frameCount
-        )
+        ), soundEvents)
     }
 }

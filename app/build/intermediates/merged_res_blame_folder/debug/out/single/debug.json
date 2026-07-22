@@ -1,11 +1,23 @@
 [
     {
-        "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_powerup_shield.png.flat",
-        "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\drawable\\powerup_shield.png"
+        "merged": "com.galaga.game.app-merged_res-44:/raw_bgm.wav.flat",
+        "source": "com.galaga.game.app-main-46:/raw/bgm.wav"
+    },
+    {
+        "merged": "com.galaga.game.app-merged_res-44:/raw_powerup.wav.flat",
+        "source": "com.galaga.game.app-main-46:/raw/powerup.wav"
+    },
+    {
+        "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\mipmap-xhdpi\\ic_launcher.png"
     },
     {
         "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_enemy_zako.png.flat",
         "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\drawable\\enemy_zako.png"
+    },
+    {
+        "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_powerup_shield.png.flat",
+        "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\drawable\\powerup_shield.png"
     },
     {
         "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_powerup_life.png.flat",
@@ -16,36 +28,40 @@
         "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\drawable\\player_ship.png"
     },
     {
-        "merged": "com.galaga.game.app-merged_res-44:/mipmap-xxhdpi_ic_launcher.png.flat",
-        "source": "com.galaga.game.app-main-46:/mipmap-xxhdpi/ic_launcher.png"
+        "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\mipmap-xxxhdpi\\ic_launcher.png"
     },
     {
         "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_player_ship_power3.png.flat",
         "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\drawable\\player_ship_power3.png"
     },
     {
-        "merged": "com.galaga.game.app-merged_res-44:/mipmap-mdpi_ic_launcher.png.flat",
-        "source": "com.galaga.game.app-main-46:/mipmap-mdpi/ic_launcher.png"
+        "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\mipmap-xxhdpi\\ic_launcher.png"
     },
     {
         "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_player_ship_power2.png.flat",
         "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\drawable\\player_ship_power2.png"
     },
     {
-        "merged": "com.galaga.game.app-merged_res-44:/mipmap-hdpi_ic_launcher.png.flat",
-        "source": "com.galaga.game.app-main-46:/mipmap-hdpi/ic_launcher.png"
+        "merged": "com.galaga.game.app-merged_res-44:/raw_explosion.wav.flat",
+        "source": "com.galaga.game.app-main-46:/raw/explosion.wav"
     },
     {
-        "merged": "com.galaga.game.app-merged_res-44:/mipmap-xxxhdpi_ic_launcher.png.flat",
-        "source": "com.galaga.game.app-main-46:/mipmap-xxxhdpi/ic_launcher.png"
+        "merged": "com.galaga.game.app-merged_res-44:/raw_shoot.wav.flat",
+        "source": "com.galaga.game.app-main-46:/raw/shoot.wav"
+    },
+    {
+        "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\mipmap-mdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\mipmap-mdpi\\ic_launcher.png"
     },
     {
         "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_enemy_goei.png.flat",
         "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\drawable\\enemy_goei.png"
     },
     {
-        "merged": "com.galaga.game.app-merged_res-44:/mipmap-xhdpi_ic_launcher.png.flat",
-        "source": "com.galaga.game.app-main-46:/mipmap-xhdpi/ic_launcher.png"
+        "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\mipmap-hdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-main-46:\\mipmap-hdpi\\ic_launcher.png"
     },
     {
         "merged": "C:\\Users\\ANTONIO\\.gradle\\daemon\\8.2\\com.galaga.game.app-merged_res-44:\\drawable_enemy_boss.png.flat",

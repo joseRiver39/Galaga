@@ -4,8 +4,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -94,7 +98,6 @@ fun GameScreen(viewModel: GameViewModel) {
                     detectTapGestures {
                         when (viewModel.gameState) {
                             is GameState.Menu -> viewModel.startGame()
-                            is GameState.Paused -> viewModel.resume()
                             is GameState.GameOver -> viewModel.startGame()
                             is GameState.Victory -> viewModel.startGame()
                             is GameState.Playing -> viewModel.pause()
@@ -120,11 +123,44 @@ fun GameScreen(viewModel: GameViewModel) {
                         enemyZakoImage, enemyGoeiImage, enemyBossImage,
                         powerupWeaponImage, powerupShieldImage, powerupLifeImage
                     )
-                    drawOverlay(this, textMeasurer, "PAUSA", "TOCA PARA CONTINUAR", cw, ch)
                 }
                 is GameState.GameOver -> drawGameOver(this, textMeasurer, gs, cw, ch)
                 is GameState.LevelIntro -> drawLevelIntro(this, textMeasurer, gs, cw, ch)
                 is GameState.Victory -> drawVictory(this, textMeasurer, gs, cw, ch)
+            }
+        }
+
+        if (gs is GameState.Paused) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    androidx.compose.foundation.text.BasicText(
+                        text = "MENÚ DE CONFIGURACIÓN",
+                        style = TextStyle(color = HudAccentColor, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                    )
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(24.dp))
+                    androidx.compose.foundation.text.BasicText(
+                        text = if (viewModel.isSoundEnabled) "Sonido: ON 🔊" else "Sonido: OFF 🔇",
+                        style = TextStyle(color = Color.White, fontSize = 24.sp),
+                        modifier = Modifier
+                            .clickable { viewModel.toggleSound() }
+                            .padding(16.dp)
+                    )
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(16.dp))
+                    androidx.compose.foundation.text.BasicText(
+                        text = "REANUDAR PARTIDA",
+                        style = TextStyle(color = Color.White, fontSize = 20.sp),
+                        modifier = Modifier
+                            .clickable { viewModel.resume() }
+                            .padding(16.dp)
+                    )
+                }
             }
         }
     }

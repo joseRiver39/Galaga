@@ -1,19 +1,32 @@
 package com.galaga.game.viewmodel
 
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import com.galaga.game.audio.SoundManager
 import com.galaga.game.engine.GameEngine
 import com.galaga.game.model.GameState
 import kotlin.random.Random
 
 data class Star(val x: Float, val y: Float, val size: Float, val alpha: Float)
 
-class GameViewModel : ViewModel() {
+class GameViewModel(application: Application) : AndroidViewModel(application) {
 
-    var gameState by mutableStateOf<GameState>(GameState.Menu)
+    val soundManager = SoundManager(application)
+
+    var isSoundEnabled by mutableStateOf(true)
         private set
+
+    private val _gameState = mutableStateOf<GameState>(GameState.Menu)
+    var gameState: GameState
+        get() = _gameState.value
+        private set(value) {
+            _gameState.value = value
+            val isPlaying = value is GameState.Playing || value is GameState.LevelIntro
+            soundManager.setGameState(isPlaying)
+        }
 
     private var canvasWidth = 1080f
     private var canvasHeight = 1920f
@@ -44,7 +57,9 @@ class GameViewModel : ViewModel() {
         else (frameTimeNanos - lastFrameTime) / 1_000_000_000f
         lastFrameTime = frameTimeNanos
         val clamped = deltaTime.coerceAtMost(0.05f)
-        gameState = engine.update(current, clamped, canvasWidth, canvasHeight)
+        val result = engine.update(current, clamped, canvasWidth, canvasHeight)
+        gameState = result.state
+        result.events.forEach { soundManager.playEvent(it) }
     }
 
     fun onPlayerDrag(dx: Float, dy: Float) {
@@ -70,5 +85,15 @@ class GameViewModel : ViewModel() {
         if (s is GameState.Paused) {
             gameState = s.playingState
         }
+    }
+
+    fun toggleSound() {
+        isSoundEnabled = !isSoundEnabled
+        soundManager.isEnabled = isSoundEnabled
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        soundManager.release()
     }
 }

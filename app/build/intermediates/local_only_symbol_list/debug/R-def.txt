@@ -10,4 +10,8 @@ drawable powerup_life
 drawable powerup_shield
 drawable powerup_weapon
 mipmap ic_launcher
+raw bgm
+raw explosion
+raw powerup
+raw shoot
 string app_name

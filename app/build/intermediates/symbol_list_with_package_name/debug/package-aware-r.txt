@@ -172,6 +172,10 @@ layout notification_template_icon_group
 layout notification_template_part_chronometer
 layout notification_template_part_time
 mipmap ic_launcher
+raw bgm
+raw explosion
+raw powerup
+raw shoot
 string androidx_startup
 string app_name
 string call_notification_answer_action
